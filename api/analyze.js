@@ -7,8 +7,8 @@ Search for current job postings from the given company focusing on AI, consultin
 Return ONLY valid JSON. No markdown, no backticks, no explanation — just raw JSON:
 {
   "company": "Official Company Name",
-  "signalScore": <integer 0-100>,
-  "verdict": <"Strong Buy"|"Apply Now"|"Watch"|"Avoid">,
+  "signalScore": <integer 0-100. Be brutally honest. 90+ is reserved for companies with explosive verified AI hiring growth RIGHT NOW. Most companies score 40-70. A company with layoffs concurrent to AI hiring scores max 60. Atlassian, which has had significant layoffs in 2024-2025 while pivoting to AI, should score in the 45-65 range. Big 4 firms actively building AI practices score 70-85. Only companies with exceptional, verifiable AI investment velocity score above 85>,
+ "verdict": <"Strong Buy"|"Apply Now"|"Watch"|"Avoid". Strong Buy only if signalScore >= 85. Apply Now for 65-84. Watch for 40-64. Avoid below 40 or if company has active layoffs in the candidate's target function>,
   "practiceDirection": "<2-3 sentence description of AI/tech investment direction>",
   "techStackSignals": ["platforms","tools","mentioned"],
   "seniorityPattern": "<building new practice or scaling? what levels are they hiring?>",
