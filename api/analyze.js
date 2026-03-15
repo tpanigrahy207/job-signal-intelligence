@@ -1,42 +1,8 @@
 import Anthropic from "@anthropic-ai/sdk";
 
-const COMPANY_SYS = `You are an elite job market intelligence analyst specializing in enterprise AI consulting.
+const COMPANY_SYS = "You are an elite job market intelligence analyst. Search for current job postings AND recent layoff news for the given company. Return ONLY valid JSON with no markdown, no backticks, no explanation. JSON structure: {\"company\":\"Official Name\",\"signalScore\":0,\"verdict\":\"Watch\",\"practiceDirection\":\"description\",\"techStackSignals\":[],\"seniorityPattern\":\"description\",\"velocity\":\"description\",\"redFlags\":[],\"greenFlags\":[],\"keyInsight\":\"description\",\"estimatedRoles\":0}. Rules for signalScore: integer 0-100. Base on AI hiring NOW + layoffs last 90 days + AI investment + practice maturity. Cannot exceed 70 if layoffs in past 90 days. Most companies 40-70. Above 85 only if exceptional AI velocity AND no recent layoffs. 2026 layoff rumors count as red flags. Rules for verdict: Strong Buy only if score 85+. Apply Now for 65-84. Watch for 40-64. Avoid below 40 or if active layoffs.";
 
-Search for current job postings and recent news about the given company.
-
-Return ONLY valid JSON. No markdown, no backticks, no explanation:
-{
-  "company": "Official Company Name",
-  "signalScore": <integer 0-100. Score MUST be calculated from ALL of these signals weighted equally: (1) AI hiring volume RIGHT NOW in 2026, (2) recent layoffs in the past 90 days, (3) public AI investment announcements, (4) AI practice maturity. A company with active layoffs in the past 90 days CANNOT score above 70. Most companies score 40-70. Only companies with exceptional verified AI investment velocity and NO recent layoffs score above 85>,
-  "verdict": <"Strong Buy"|"Apply Now"|"Watch"|"Avoid". Strong Buy only if signalScore >= 85. Apply Now for 65-84. Watch for 40-64. Avoid below 40 or if active layoffs in target function. If you find conflicting signals, score MUST reflect BOTH. Scores should be consistent across runs. News from the last 30 days outweighs news from 12+ months ago. A rumored 2026 layoff is a red flag even if unconfirmed.>,
-  "practiceDirection": "<2-3 sentence description of AI/tech investment direction>",
-  "techStackSignals": ["platforms","tools","mentioned"],
-  "seniorityPattern": "<building new practice or scaling? what levels are they hiring?>",
-  "velocity": "<hiring pace, e.g. 8 AI roles posted in 30 days>",
-  "redFlags": ["red flags including any layoff rumors"],
-  "greenFlags": ["positive signals"],
-  "keyInsight": "<one powerful sentence for a senior job seeker>",
-  "estimatedRoles": <integer>
-}`;
-
-const JD_SYS = `You are a senior executive recruiter who decodes job descriptions to reveal what companies REALLY want behind corporate language.
-
-Return ONLY valid JSON. No markdown, no backticks, no explanation — just raw JSON:
-{
-  "title": "<role title as stated>",
-  "realSeniority": "<actual level regardless of title>",
-  "actualStack": ["real","tech","implied"],
-  "statedStack": ["what","they","wrote"],
-  "whatTheyReallyWant": "<plain English 2-3 sentences>",
-  "salaryFairness": <"Fair"|"Below Market"|"Above Market"|"Unknown">,
-  "salarySignals": "<compensation assessment>",
-  "redFlags": ["red flags if any"],
-  "greenFlags": ["positive signals"],
-  "hiddenRequirements": ["unstated but implied requirements"],
-  "verdict": <"Apply"|"Negotiate"|"Avoid"|"Dream Role">,
-  "verdictReason": "<one sentence>",
-  "interviewAngle": "<strategic positioning advice for a senior candidate>"
-}`;
+const JD_SYS = "You are a senior executive recruiter who decodes job descriptions. Return ONLY valid JSON with no markdown, no backticks, no explanation. JSON structure: {\"title\":\"role title\",\"realSeniority\":\"actual level\",\"actualStack\":[],\"statedStack\":[],\"whatTheyReallyWant\":\"description\",\"salaryFairness\":\"Fair\",\"salarySignals\":\"description\",\"redFlags\":[],\"greenFlags\":[],\"hiddenRequirements\":[],\"verdict\":\"Apply\",\"verdictReason\":\"one sentence\",\"interviewAngle\":\"advice\"}. salaryFairness must be one of: Fair, Below Market, Above Market, Unknown. verdict must be one of: Apply, Negotiate, Avoid, Dream Role.";
 
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -44,39 +10,20 @@ export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
   if (req.method === "OPTIONS") return res.status(200).end();
-  if (req.method !== "POST")
-    return res.status(405).json({ error: "Method not allowed" });
+  if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey)
-    return res.status(500).json({
-      error:
-        "ANTHROPIC_API_KEY not configured. Add it to your Vercel environment variables.",
-    });
+  if (!apiKey) return res.status(500).json({ error: "ANTHROPIC_API_KEY not configured in Vercel environment variables." });
 
   const { mode, input } = req.body;
-  if (!mode || !input)
-    return res.status(400).json({ error: "Missing mode or input" });
+  if (!mode || !input) return res.status(400).json({ error: "Missing mode or input" });
 
   try {
     const client = new Anthropic({ apiKey });
 
-    const systemPrompt = mode === "company" ? COMPANY_SYS : JD_SYS;
-    const userMessage =
-      mode === "company"
-        ? `Analyze AI and consulting job market signals for: "${input}". You MUST search for THREE things in order: (1) their AI-related job postings active RIGHT NOW in 2026, (2) any layoffs, workforce reductions, or hiring freezes in the past 90 days specifically, (3) any rumored or announced restructuring plans for 2026. Prioritize news from the last 30 days over older articles. Only after finding all three should you generate the intelligence card. The score must heavily penalize any layoff activity from the past 90 days.`
-```
-
-**Fix 2 — Add recency weighting to the scoring anchor in the system prompt:**
-
-Find the `IMPORTANT:` line you added and append this to the end of it:
-```
-News from the last 30 days outweighs news from 12+ months ago. A rumored layoff in 2026 is a red flag even if unconfirmed — note it explicitly in redFlags.
-```
-
-So the full IMPORTANT line becomes:
-```
-IMPORTANT: If you search and find conflicting signals (e.g. both layoffs AND AI hiring), the score must reflect BOTH. A company cannot score above 70 if there is verifiable evidence of layoffs in the past 18 months regardless of AI investment. Scores should be consistent across runs — if uncertain, score conservative. News from the last 30 days outweighs news from 12+ months ago. A rumored layoff in 2026 is a red flag even if unconfirmed — note it explicitly in redFlags.
+    const userMessage = mode === "company"
+      ? "Analyze job market signals for: " + input + ". Search for THREE things: (1) AI-related job postings active in 2026, (2) layoffs or workforce reductions in the past 90 days, (3) any rumored restructuring for 2026. Prioritize news from last 30 days. Heavily penalize any layoff activity from past 90 days in the score."
+      : "Decode this job description:\n\n" + input;
 
     let messages = [{ role: "user", content: userMessage }];
     let data;
@@ -85,7 +32,7 @@ IMPORTANT: If you search and find conflicting signals (e.g. both layoffs AND AI 
       const params = {
         model: "claude-sonnet-4-20250514",
         max_tokens: 1500,
-        system: systemPrompt,
+        system: mode === "company" ? COMPANY_SYS : JD_SYS,
         messages,
       };
 
@@ -106,7 +53,7 @@ IMPORTANT: If you search and find conflicting signals (e.g. both layoffs AND AI 
           content: toolUseBlocks.map((b) => ({
             type: "tool_result",
             tool_use_id: b.id,
-            content: "Search executed successfully",
+            content: "Search executed",
           })),
         },
       ];
@@ -119,16 +66,11 @@ IMPORTANT: If you search and find conflicting signals (e.g. both layoffs AND AI 
 
     const clean = text.replace(/```json\n?|```\n?/g, "").trim();
     const match = clean.match(/\{[\s\S]*\}/);
-    if (!match)
-      return res
-        .status(500)
-        .json({ error: "Could not parse AI response — please try again" });
+    if (!match) return res.status(500).json({ error: "Could not parse response — please try again" });
 
     return res.status(200).json(JSON.parse(match[0]));
   } catch (err) {
-    console.error("Anthropic API error:", err);
-    return res
-      .status(500)
-      .json({ error: err.message || "Analysis failed. Please try again." });
+    console.error("Error:", err);
+    return res.status(500).json({ error: err.message || "Analysis failed" });
   }
 }
