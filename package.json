@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "AI-powered job market intelligence — scan companies or decode job descriptions",
   "scripts": {
-    "dev": "vercel dev",
+    "dev": "vite",
     "build": "vite build",
     "preview": "vite preview"
   },
