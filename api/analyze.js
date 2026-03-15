@@ -7,8 +7,9 @@ Search for current job postings from the given company focusing on AI, consultin
 Return ONLY valid JSON. No markdown, no backticks, no explanation — just raw JSON:
 {
   "company": "Official Company Name",
-  "signalScore": <integer 0-100. Be brutally honest. 90+ is reserved for companies with explosive verified AI hiring growth RIGHT NOW. Most companies score 40-70. A company with layoffs concurrent to AI hiring scores max 60. Atlassian, which has had significant layoffs in 2024-2025 while pivoting to AI, should score in the 45-65 range. Big 4 firms actively building AI practices score 70-85. Only companies with exceptional, verifiable AI investment velocity score above 85>,
+  "signalScore": <integer 0-100. Score MUST be calculated from ALL of these signals weighted equally: (1) AI hiring volume RIGHT NOW, (2) recent layoffs in non-AI functions, (3) public AI investment announcements, (4) AI practice maturity. A company strong on (1) and (3) but with active layoffs on (2) CANNOT score above 75. Meta specifically: strong AI investment but history of significant workforce cuts = 55-70 range. Never score based on a single data point>,
  "verdict": <"Strong Buy"|"Apply Now"|"Watch"|"Avoid". Strong Buy only if signalScore >= 85. Apply Now for 65-84. Watch for 40-64. Avoid below 40 or if company has active layoffs in the candidate's target function>,
+ IMPORTANT: If you search and find conflicting signals (e.g. both layoffs AND AI hiring), the score must reflect BOTH. A company cannot score above 70 if there is verifiable evidence of layoffs in the past 18 months regardless of AI investment. Scores should be consistent across runs — if uncertain, score conservative.
   "practiceDirection": "<2-3 sentence description of AI/tech investment direction>",
   "techStackSignals": ["platforms","tools","mentioned"],
   "seniorityPattern": "<building new practice or scaling? what levels are they hiring?>",
@@ -64,8 +65,19 @@ export default async function handler(req, res) {
     const systemPrompt = mode === "company" ? COMPANY_SYS : JD_SYS;
     const userMessage =
       mode === "company"
-        ? `Analyze AI and consulting job market signals for: "${input}". Search for their current open roles, focusing on AI practice, consulting, and technology leadership positions.`
-        : `Decode this job description and reveal what they really want:\n\n${input}`;
+        ? `Analyze AI and consulting job market signals for: "${input}". You MUST search for THREE things in order: (1) their AI-related job postings active RIGHT NOW in 2026, (2) any layoffs, workforce reductions, or hiring freezes in the past 90 days specifically, (3) any rumored or announced restructuring plans for 2026. Prioritize news from the last 30 days over older articles. Only after finding all three should you generate the intelligence card. The score must heavily penalize any layoff activity from the past 90 days.`
+```
+
+**Fix 2 — Add recency weighting to the scoring anchor in the system prompt:**
+
+Find the `IMPORTANT:` line you added and append this to the end of it:
+```
+News from the last 30 days outweighs news from 12+ months ago. A rumored layoff in 2026 is a red flag even if unconfirmed — note it explicitly in redFlags.
+```
+
+So the full IMPORTANT line becomes:
+```
+IMPORTANT: If you search and find conflicting signals (e.g. both layoffs AND AI hiring), the score must reflect BOTH. A company cannot score above 70 if there is verifiable evidence of layoffs in the past 18 months regardless of AI investment. Scores should be consistent across runs — if uncertain, score conservative. News from the last 30 days outweighs news from 12+ months ago. A rumored layoff in 2026 is a red flag even if unconfirmed — note it explicitly in redFlags.
 
     let messages = [{ role: "user", content: userMessage }];
     let data;
