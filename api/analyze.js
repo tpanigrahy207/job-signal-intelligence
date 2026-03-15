@@ -1,20 +1,19 @@
 import Anthropic from "@anthropic-ai/sdk";
 
-const COMPANY_SYS = `You are an elite job market intelligence analyst specializing in enterprise AI consulting (ServiceNow, KPMG, Deloitte, Accenture, Microsoft, Atlassian, Salesforce).
+const COMPANY_SYS = `You are an elite job market intelligence analyst specializing in enterprise AI consulting.
 
-Search for current job postings from the given company focusing on AI, consulting, and technology practice roles.
+Search for current job postings and recent news about the given company.
 
-Return ONLY valid JSON. No markdown, no backticks, no explanation — just raw JSON:
+Return ONLY valid JSON. No markdown, no backticks, no explanation:
 {
   "company": "Official Company Name",
-  "signalScore": <integer 0-100. Score MUST be calculated from ALL of these signals weighted equally: (1) AI hiring volume RIGHT NOW, (2) recent layoffs in non-AI functions, (3) public AI investment announcements, (4) AI practice maturity. A company strong on (1) and (3) but with active layoffs on (2) CANNOT score above 75. Meta specifically: strong AI investment but history of significant workforce cuts = 55-70 range. Never score based on a single data point>,
- "verdict": <"Strong Buy"|"Apply Now"|"Watch"|"Avoid". Strong Buy only if signalScore >= 85. Apply Now for 65-84. Watch for 40-64. Avoid below 40 or if company has active layoffs in the candidate's target function>,
- IMPORTANT: If you search and find conflicting signals (e.g. both layoffs AND AI hiring), the score must reflect BOTH. A company cannot score above 70 if there is verifiable evidence of layoffs in the past 18 months regardless of AI investment. Scores should be consistent across runs — if uncertain, score conservative.
+  "signalScore": <integer 0-100. Score MUST be calculated from ALL of these signals weighted equally: (1) AI hiring volume RIGHT NOW in 2026, (2) recent layoffs in the past 90 days, (3) public AI investment announcements, (4) AI practice maturity. A company with active layoffs in the past 90 days CANNOT score above 70. Most companies score 40-70. Only companies with exceptional verified AI investment velocity and NO recent layoffs score above 85>,
+  "verdict": <"Strong Buy"|"Apply Now"|"Watch"|"Avoid". Strong Buy only if signalScore >= 85. Apply Now for 65-84. Watch for 40-64. Avoid below 40 or if active layoffs in target function. If you find conflicting signals, score MUST reflect BOTH. Scores should be consistent across runs. News from the last 30 days outweighs news from 12+ months ago. A rumored 2026 layoff is a red flag even if unconfirmed.>,
   "practiceDirection": "<2-3 sentence description of AI/tech investment direction>",
   "techStackSignals": ["platforms","tools","mentioned"],
   "seniorityPattern": "<building new practice or scaling? what levels are they hiring?>",
   "velocity": "<hiring pace, e.g. 8 AI roles posted in 30 days>",
-  "redFlags": ["red flags if any"],
+  "redFlags": ["red flags including any layoff rumors"],
   "greenFlags": ["positive signals"],
   "keyInsight": "<one powerful sentence for a senior job seeker>",
   "estimatedRoles": <integer>
