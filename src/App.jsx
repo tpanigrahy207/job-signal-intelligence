@@ -1,0 +1,367 @@
+import { useState } from "react";
+
+const VERDICT_COLORS = {
+  "Strong Buy": "#10b981",
+  "Apply Now": "#06b6d4",
+  Watch: "#f59e0b",
+  Avoid: "#ef4444",
+  Apply: "#06b6d4",
+  Negotiate: "#f59e0b",
+  "Dream Role": "#10b981",
+};
+
+const SALARY_COLORS = {
+  Fair: "#10b981",
+  "Below Market": "#ef4444",
+  "Above Market": "#06b6d4",
+  Unknown: "#64748b",
+};
+
+function ScoreMeter({ score }) {
+  const c = score >= 70 ? "#10b981" : score >= 40 ? "#f59e0b" : "#ef4444";
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
+      <div>
+        <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 48, fontWeight: 600, color: c, lineHeight: 1 }}>
+          {score}
+        </div>
+        <div style={{ fontSize: 10, color: "#475569", fontFamily: "'JetBrains Mono',monospace", textTransform: "uppercase", letterSpacing: "0.1em", marginTop: 4 }}>
+          Signal Score
+        </div>
+      </div>
+      <div style={{ flex: 1, minWidth: 120 }}>
+        <div style={{ height: 4, background: "#1e2d45", borderRadius: 2, overflow: "hidden", marginBottom: 6 }}>
+          <div style={{ height: "100%", width: `${score}%`, background: c, borderRadius: 2, transition: "width 1s ease" }} />
+        </div>
+        <div style={{ fontSize: 11, color: "#475569", fontFamily: "'JetBrains Mono',monospace" }}>/100 confidence</div>
+      </div>
+    </div>
+  );
+}
+
+function VerdictBadge({ verdict }) {
+  const c = VERDICT_COLORS[verdict] || "#64748b";
+  return (
+    <span style={{ padding: "5px 14px", borderRadius: 100, fontFamily: "'JetBrains Mono',monospace", fontSize: 11, fontWeight: 500, letterSpacing: "0.06em", textTransform: "uppercase", background: `${c}18`, border: `1px solid ${c}40`, color: c, whiteSpace: "nowrap" }}>
+      {verdict}
+    </span>
+  );
+}
+
+function SectionLabel({ children }) {
+  return (
+    <div style={{ fontSize: 10, fontFamily: "'JetBrains Mono',monospace", color: "#475569", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 8 }}>
+      {children}
+    </div>
+  );
+}
+
+function Pill({ children, muted }) {
+  return (
+    <span style={{ background: muted ? "rgba(100,116,139,0.1)" : "rgba(6,182,212,0.08)", border: `1px solid ${muted ? "rgba(100,116,139,0.2)" : "rgba(6,182,212,0.2)"}`, color: muted ? "#64748b" : "#67e8f9", padding: "3px 10px", borderRadius: 5, fontSize: 11, fontFamily: "'JetBrains Mono',monospace" }}>
+      {children}
+    </span>
+  );
+}
+
+function FlagItem({ text, type }) {
+  const colors = { green: "#10b981", red: "#ef4444", amber: "#f59e0b" };
+  const c = colors[type] || "#64748b";
+  return (
+    <div style={{ display: "flex", alignItems: "flex-start", gap: 8, fontSize: 13, color: "#94a3b8", lineHeight: 1.5 }}>
+      <span style={{ width: 6, height: 6, borderRadius: "50%", background: c, flexShrink: 0, marginTop: 5 }} />
+      {text}
+    </div>
+  );
+}
+
+function InsightBox({ label, text, accent }) {
+  const bg = accent ? "rgba(245,158,11,0.05)" : "rgba(6,182,212,0.05)";
+  const border = accent ? "rgba(245,158,11,0.18)" : "rgba(6,182,212,0.15)";
+  const color = accent ? "#fde68a" : "#a5f3fc";
+  return (
+    <div style={{ background: bg, border: `1px solid ${border}`, borderRadius: 10, padding: "14px 18px" }}>
+      <SectionLabel>{label}</SectionLabel>
+      <p style={{ fontSize: 14, color, lineHeight: 1.6, fontWeight: 400 }}>{text}</p>
+    </div>
+  );
+}
+
+function CompanyResult({ result }) {
+  return (
+    <div>
+      <div style={{ padding: "24px 28px 20px", borderBottom: "1px solid #1e2d45" }}>
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16, flexWrap: "wrap", marginBottom: 16 }}>
+          <div style={{ fontFamily: "'Syne',sans-serif", fontWeight: 800, fontSize: 26, color: "#f1f5f9", letterSpacing: "-0.5px" }}>
+            {result.company}
+          </div>
+          <VerdictBadge verdict={result.verdict} />
+        </div>
+        <ScoreMeter score={result.signalScore || 0} />
+        {result.velocity && (
+          <div style={{ marginTop: 8, fontSize: 12, color: "#475569", fontFamily: "'JetBrains Mono',monospace" }}>
+            {result.velocity}{result.estimatedRoles ? ` · ~${result.estimatedRoles} relevant roles` : ""}
+          </div>
+        )}
+      </div>
+      <div style={{ padding: "24px 28px", display: "flex", flexDirection: "column", gap: 20 }}>
+        {result.keyInsight && <InsightBox label="// Key Insight" text={result.keyInsight} accent={true} />}
+        {result.practiceDirection && (
+          <div>
+            <SectionLabel>// Practice Direction</SectionLabel>
+            <p style={{ fontSize: 13, color: "#cbd5e1", lineHeight: 1.7 }}>{result.practiceDirection}</p>
+          </div>
+        )}
+        {result.techStackSignals?.length > 0 && (
+          <div>
+            <SectionLabel>// Tech Stack Signals</SectionLabel>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+              {result.techStackSignals.map((t, i) => <Pill key={i}>{t}</Pill>)}
+            </div>
+          </div>
+        )}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+          {result.greenFlags?.length > 0 && (
+            <div>
+              <SectionLabel>// Green Flags</SectionLabel>
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                {result.greenFlags.map((f, i) => <FlagItem key={i} text={f} type="green" />)}
+              </div>
+            </div>
+          )}
+          {result.redFlags?.length > 0 && (
+            <div>
+              <SectionLabel>// Red Flags</SectionLabel>
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                {result.redFlags.map((f, i) => <FlagItem key={i} text={f} type="red" />)}
+              </div>
+            </div>
+          )}
+        </div>
+        {result.seniorityPattern && (
+          <div style={{ background: "#0a0e18", border: "1px solid #1e2d45", borderRadius: 10, padding: "14px 16px" }}>
+            <SectionLabel>// Seniority Pattern</SectionLabel>
+            <p style={{ fontSize: 13, color: "#94a3b8", fontFamily: "'JetBrains Mono',monospace", lineHeight: 1.5 }}>
+              {result.seniorityPattern}
+            </p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function JDResult({ result }) {
+  const sc = SALARY_COLORS[result.salaryFairness] || "#64748b";
+  return (
+    <div>
+      <div style={{ padding: "24px 28px 20px", borderBottom: "1px solid #1e2d45" }}>
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
+          <div>
+            <div style={{ fontFamily: "'Syne',sans-serif", fontWeight: 700, fontSize: 20, color: "#f1f5f9" }}>
+              {result.title}
+            </div>
+            <div style={{ marginTop: 6, fontSize: 12, fontFamily: "'JetBrains Mono',monospace", color: "#64748b" }}>
+              Real seniority: <span style={{ color: "#f59e0b" }}>{result.realSeniority}</span>
+            </div>
+            {result.verdictReason && (
+              <p style={{ marginTop: 8, fontSize: 13, color: "#94a3b8", lineHeight: 1.5 }}>{result.verdictReason}</p>
+            )}
+          </div>
+          <VerdictBadge verdict={result.verdict} />
+        </div>
+      </div>
+      <div style={{ padding: "24px 28px", display: "flex", flexDirection: "column", gap: 20 }}>
+        {result.whatTheyReallyWant && <InsightBox label="// What They Really Want" text={result.whatTheyReallyWant} accent={true} />}
+        {result.interviewAngle && <InsightBox label="// Your Interview Angle" text={result.interviewAngle} accent={false} />}
+        {(result.statedStack?.length > 0 || result.actualStack?.length > 0) && (
+          <div>
+            <SectionLabel>// Tech Stack: Stated vs Actual Signals</SectionLabel>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <div>
+                <div style={{ fontSize: 10, color: "#334155", fontFamily: "'JetBrains Mono',monospace", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 8 }}>Stated</div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
+                  {result.statedStack?.map((t, i) => <Pill key={i} muted>{t}</Pill>)}
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize: 10, color: "#334155", fontFamily: "'JetBrains Mono',monospace", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 8 }}>Actual Signals</div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
+                  {result.actualStack?.map((t, i) => <Pill key={i}>{t}</Pill>)}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+          {result.greenFlags?.length > 0 && (
+            <div>
+              <SectionLabel>// Green Flags</SectionLabel>
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                {result.greenFlags.map((f, i) => <FlagItem key={i} text={f} type="green" />)}
+              </div>
+            </div>
+          )}
+          {result.redFlags?.length > 0 && (
+            <div>
+              <SectionLabel>// Red Flags</SectionLabel>
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                {result.redFlags.map((f, i) => <FlagItem key={i} text={f} type="red" />)}
+              </div>
+            </div>
+          )}
+        </div>
+        {result.hiddenRequirements?.length > 0 && (
+          <div>
+            <SectionLabel>// Hidden Requirements</SectionLabel>
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              {result.hiddenRequirements.map((h, i) => (
+                <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 8, fontSize: 13, color: "#94a3b8", lineHeight: 1.5 }}>
+                  <span style={{ color: "#f59e0b", flexShrink: 0 }}>›</span>{h}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        <div style={{ background: "#0a0e18", border: "1px solid #1e2d45", borderRadius: 10, padding: "14px 16px" }}>
+          <SectionLabel>// Salary Signal</SectionLabel>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+            <span style={{ color: sc, fontFamily: "'JetBrains Mono',monospace", fontSize: 13, fontWeight: 500 }}>
+              {result.salaryFairness}
+            </span>
+            {result.salarySignals && (
+              <span style={{ fontSize: 12, color: "#64748b" }}>· {result.salarySignals}</span>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function App() {
+  const [mode, setMode] = useState("company");
+  const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState(null);
+  const [error, setError] = useState(null);
+  const [loadingMsg, setLoadingMsg] = useState("");
+
+  const switchMode = (m) => { setMode(m); setResult(null); setInput(""); setError(null); };
+
+  const analyze = async () => {
+    if (!input.trim() || loading) return;
+    setLoading(true); setResult(null); setError(null);
+
+    const loadingMsgs = mode === "company"
+      ? ["Scanning job boards...", "Extracting signals...", "Building intel card..."]
+      : ["Decoding the language...", "Finding the subtext...", "Assembling your brief..."];
+
+    let mi = 0;
+    setLoadingMsg(loadingMsgs[0]);
+    const timer = setInterval(() => { mi = (mi + 1) % loadingMsgs.length; setLoadingMsg(loadingMsgs[mi]); }, 2200);
+
+    try {
+      const res = await fetch("/api/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode, input }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Analysis failed");
+      setResult(data);
+    } catch (err) {
+      setError(err.message || "Analysis failed — please try again");
+    } finally {
+      clearInterval(timer);
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div style={{ minHeight: "100vh", background: "#080c14", padding: "0 0 60px" }}>
+      <div style={{ position: "fixed", inset: 0, backgroundImage: "radial-gradient(circle,rgba(255,255,255,0.035) 1px,transparent 1px)", backgroundSize: "28px 28px", pointerEvents: "none", zIndex: 0 }} />
+      <div style={{ position: "relative", zIndex: 1, maxWidth: 760, margin: "0 auto", padding: "32px 20px" }}>
+
+        {/* Header */}
+        <div style={{ marginBottom: 36 }}>
+          <h1 style={{ fontFamily: "'Syne',sans-serif", fontWeight: 800, fontSize: 28, letterSpacing: "-0.5px", color: "#f1f5f9", lineHeight: 1.1 }}>
+            Job Signal <span style={{ color: "#f59e0b" }}>Intelligence</span>
+          </h1>
+          <p style={{ fontSize: 11, fontFamily: "'JetBrains Mono',monospace", color: "#334155", marginTop: 6 }}>
+            // ai-powered market intel · open source · bring your own key
+          </p>
+        </div>
+
+        {/* Mode toggle */}
+        <div style={{ display: "flex", background: "#0f1520", border: "1px solid #1e2d45", borderRadius: 10, padding: 4, marginBottom: 20, gap: 4 }}>
+          {["company", "jd"].map((m) => (
+            <button key={m} onClick={() => switchMode(m)}
+              style={{ flex: 1, padding: "10px", borderRadius: 7, border: mode === m ? "1px solid rgba(245,158,11,0.25)" : "1px solid transparent", cursor: "pointer", fontFamily: "'DM Sans',sans-serif", fontSize: 13, fontWeight: 500, transition: "all 0.2s", background: mode === m ? "rgba(245,158,11,0.1)" : "transparent", color: mode === m ? "#f59e0b" : "#64748b" }}>
+              {m === "company" ? "◉  Company Intel" : "◎  JD Decoder"}
+            </button>
+          ))}
+        </div>
+
+        {/* Input */}
+        <div style={{ background: "#0f1520", border: "1px solid #1e2d45", borderRadius: 12, padding: "18px 20px", marginBottom: 16 }}>
+          <div style={{ fontSize: 10, fontFamily: "'JetBrains Mono',monospace", color: "#334155", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 10 }}>
+            {mode === "company" ? "// Company name" : "// Paste job description"}
+          </div>
+          {mode === "company" ? (
+            <input value={input} onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && analyze()}
+              placeholder="e.g. KPMG, Deloitte, Accenture, ServiceNow..."
+              style={{ width: "100%", background: "transparent", border: "none", outline: "none", color: "#f1f5f9", fontFamily: "'Syne',sans-serif", fontSize: 22, fontWeight: 700 }} />
+          ) : (
+            <textarea value={input} onChange={(e) => setInput(e.target.value)}
+              placeholder="Paste the full job description here. More context = sharper signal..."
+              style={{ width: "100%", background: "transparent", border: "none", outline: "none", color: "#e2e8f0", fontFamily: "'DM Sans',sans-serif", fontSize: 13, lineHeight: 1.7, resize: "vertical", minHeight: 160 }} />
+          )}
+        </div>
+
+        {/* Analyze button */}
+        <button onClick={analyze} disabled={loading || !input.trim()}
+          style={{ width: "100%", padding: "13px", background: loading ? "rgba(245,158,11,0.05)" : "rgba(245,158,11,0.1)", border: "1px solid rgba(245,158,11,0.3)", color: "#f59e0b", borderRadius: 10, cursor: loading || !input.trim() ? "not-allowed" : "pointer", fontFamily: "'Syne',sans-serif", fontSize: 14, fontWeight: 700, letterSpacing: "0.04em", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginBottom: 16, opacity: !input.trim() && !loading ? 0.4 : 1, transition: "all 0.2s" }}>
+          {loading ? `◌  ${loadingMsg}` : `⚡  ${mode === "company" ? "Run Intel Scan" : "Decode This JD"}`}
+        </button>
+
+        {/* Scan line */}
+        {loading && (
+          <div style={{ height: 2, background: "#1e2d45", borderRadius: 1, marginBottom: 20, overflow: "hidden", position: "relative" }}>
+            <div style={{ position: "absolute", inset: 0, background: "linear-gradient(90deg,transparent,#f59e0b,transparent)", animation: "scan 1.4s linear infinite" }} />
+          </div>
+        )}
+
+        {/* Error */}
+        {error && (
+          <div style={{ background: "rgba(239,68,68,0.07)", border: "1px solid rgba(239,68,68,0.22)", borderRadius: 10, padding: "12px 16px", color: "#fca5a5", fontSize: 12, fontFamily: "'JetBrains Mono',monospace", marginBottom: 20 }}>
+            ⚠ {error}
+          </div>
+        )}
+
+        {/* Results */}
+        {result && !loading && (
+          <div style={{ background: "#0f1520", border: "1px solid #1e2d45", borderRadius: 16, overflow: "hidden", marginBottom: 20 }}>
+            {mode === "company" ? <CompanyResult result={result} /> : <JDResult result={result} />}
+          </div>
+        )}
+
+        {/* Footer */}
+        <div style={{ textAlign: "center", fontSize: 10, color: "#1e2d45", fontFamily: "'JetBrains Mono',monospace", paddingTop: 8 }}>
+          Built with Claude API · Open source · github.com/YOUR_USERNAME/job-signal-intelligence
+        </div>
+      </div>
+
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=JetBrains+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap');
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background: #080c14; }
+        @keyframes scan { 0% { transform: translateX(-100%); } 100% { transform: translateX(400%); } }
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: #0f1520; }
+        ::-webkit-scrollbar-thumb { background: #1e2d45; border-radius: 2px; }
+      `}</style>
+    </div>
+  );
+}
