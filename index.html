@@ -23,7 +23,15 @@
 <body>
 <div id="root"></div>
 <script type="text/babel">
+//const { useState } = React;
 const { useState } = React;
+const stripCites = (text) => typeof text === "string" ? text.replace(/<cite[^>]*>|<\/cite>/g, "") : text;
+const cleanResult = (obj) => {
+  if (typeof obj === "string") return obj.replace(/<cite[^>]*>|<\/cite>/g, "");
+  if (Array.isArray(obj)) return obj.map(cleanResult);
+  if (obj && typeof obj === "object") return Object.fromEntries(Object.entries(obj).map(([k,v]) => [k, cleanResult(v)]));
+  return obj;
+};
 
 const VERDICT_COLORS = {
   "Strong Buy": "#10b981", "Apply Now": "#06b6d4", "Watch": "#f59e0b", "Avoid": "#ef4444",
@@ -236,7 +244,8 @@ function App() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Analysis failed");
-      setResult(data);
+      //setResult(data);
+      setResult(cleanResult(data));
     } catch (err) {
       setError(err.message || "Analysis failed — please try again");
     } finally {
