@@ -110,27 +110,7 @@ Built by [Tanu](https://linkedin.com/in/YOUR_PROFILE) — ServiceNow practice st
 
 ---
 
-## LinkedIn Post (feel free to use/adapt)
 
-```
-Layoff trackers show you who's losing jobs.
-
-I built something that shows you where the real AI consulting investment 
-is going — before the roles get cold.
-
-Two modes:
-→ Company Intel: scan any firm's AI hiring signals, tech stack, 
-  seniority pattern, and get a verdict (Strong Buy → Avoid)
-→ JD Decoder: paste any job posting and get what they REALLY want, 
-  hidden requirements, salary fairness signal, and your interview angle
-
-Fully open source. Connect your own Anthropic API key and deploy 
-to Vercel in minutes.
-
-GitHub: [link]
-Live demo: [link]
-
-#AI #JobSearch #OpenSource #ServiceNow #Consulting
 ```
 
 ---
